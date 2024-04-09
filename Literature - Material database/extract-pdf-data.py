@@ -362,7 +362,7 @@ def pre_process_for_pypdf2(json_data, key_words):
 
 
 client = OpenAI(
-    api_key="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",
+    api_key="",
 )
 
 def get_gpt_response(data):
@@ -375,7 +375,7 @@ def get_gpt_response(data):
                 {"role": "system", "content": prompt, },
                 {"role": "user", "content": f"{text_input}", },
             ],
-            model="gpt-3.5-turbo-1106",
+            model="gpt-3.5-turbo",
             # model="gpt-4",
             temperature=0,
         )
