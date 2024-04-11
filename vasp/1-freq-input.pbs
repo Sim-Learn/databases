@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# 进入包含所有计算文件夹的父目录
+/public/home/xuhui/xh/graphene/MM/ads-h/cixing/Co-1
+
+# 遍历所有子文件夹
+for dir in */; do
+    # 检查子文件夹中是否存在CONTCAR文件
+    if [ -f "$dir/CONTCAR" ]; then
+        # 创建新的文件夹，命名为原文件夹名后加上某个后缀，例如"_v"
+        new_dir="${dir%/}_v"
+        mkdir "$new_dir"
+
+        # 将CONTCAR复制到新文件夹，并重命名为POSCAR
+        cp "$dir/CONTCAR" "$new_dir/POSCAR"
+
+        # 复制POTCAR, KPOINTS, vasp.pbs文件（如果存在）
+        for file in POTCAR KPOINTS vasp.pbs; do
+            if [ -f "$dir/$file" ]; then
+                cp "$dir/$file" "$new_dir"
+            fi
+        done
+    fi
+done
+
+# 将所有带有_sol后缀的文件夹移动到新目录
+for dir in *_v/; do
+    mv "$dir" "/public/home/xuhui/xh/graphene/MM/ads-h/cixing/Co-1-freq"
+done

@@ -1,0 +1,16 @@
+#PBS -N vasp_test
+#PBS -l nodes=1:ppn=56
+#PBS -e ./vasp.error
+#PBS -o ./vasp.out
+#PBS -q batch
+#PBS -V
+#PBS -S /bin/bash 
+### Set intel environment###
+source /public/software/intel2020u2/intel2020u2_env.sh
+cd $PBS_O_WORKDIR
+NP=`cat $PBS_NODEFILE | wc -l`
+NN=`cat $PBS_NODEFILE | sort | uniq | tee /tmp/nodes.$$ | wc -l`
+cat $PBS_NODEFILE > /tmp/nodefile.$$
+mpirun  -machinefile /tmp/nodefile.$$ -n $NP /public/software/vasp.6.3.0/bin/vasp_std | tee log.$$
+rm -rf /tmp/nodefile.$$
+rm -rf /tmp/nodes.$$

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# 指定源目录路径
+SOURCE_DIR="/public/home/xuhui/xh/graphene/MM/ads-h/cixing/Ag-freq"
+
+# 遍历源目录下的所有子目录
+find "$SOURCE_DIR" -type d -mindepth 1 -maxdepth 1 | while read subdir; do
+    echo "Processing directory: $subdir"
+    POSCAR_PATH="$subdir/POSCAR"
+    if [ -f "$POSCAR_PATH" ]; then
+        # 读取原子类型和数量
+        IFS=' ' read -r -a atom_types <<< "$(awk 'NR==6 {print $0}' "$POSCAR_PATH")"
+        IFS=' ' read -r -a atom_counts <<< "$(awk 'NR==7 {print $0}' "$POSCAR_PATH")"
+        
+        # 计算原子总数
+        total_atoms=0
+        for count in "${atom_counts[@]}"; do
+            ((total_atoms+=count))
+        done
+
+        # 确定Direct标记之后的第一行位置，为原子坐标开始的行
+        direct_line=$(awk '/Direct/{print NR; exit}' "$POSCAR_PATH")
+        let atom_start_line=direct_line+1
+
+        # 找到氢原子在原子类型列表中的索引
+        hydrogen_index=-1
+        for i in "${!atom_types[@]}"; do
+            if [ "${atom_types[$i]}" == "H" ]; then
+                hydrogen_index=$((i + 1))
+                break
+            fi
+        done
+
+        # 如果存在氢原子
+        if [ $hydrogen_index -ne -1 ]; then
+            # 计算氢原子开始行号
+            hydrogen_start_line=$atom_start_line
+            for ((i=1; i<hydrogen_index; i++)); do
+                hydrogen_start_line=$(($hydrogen_start_line + ${atom_counts[$((i-1))]}))
+            done
+            hydrogen_end_line=$(($hydrogen_start_line + ${atom_counts[$((hydrogen_index-1))]} - 1))
+
+            # 找到z坐标最高的氢原子
+            highest_z_line=$(awk -v start="$hydrogen_start_line" -v end="$hydrogen_end_line" 'NR>=start && NR<=end {if (!max_z || $3 > max_z) {max_z=$3; max_line=NR}} END {print max_line}' "$POSCAR_PATH")
+
+            # 更新POSCAR文件，只为z坐标最高的氢原子标记"T T T"
+            awk -v highest_z_line="$highest_z_line" -v atom_start_line="$atom_start_line" -v total_atoms="$total_atoms" 'NR==highest_z_line {print $1, $2, $3, "T T T"} NR>=atom_start_line && NR!=highest_z_line && NR<=(atom_start_line+total_atoms) {print $1, $2, $3, "F F F"} NR<atom_start_line {print $0}' "$POSCAR_PATH" > "${POSCAR_PATH}.tmp"
+
+            # 替换原POSCAR文件
+            mv "${POSCAR_PATH}.tmp" "$POSCAR_PATH"
+            echo "Updated POSCAR in $subdir: Only the highest Z hydrogen atom set to movable."
+        else
+            echo "No hydrogen atoms found in $subdir."
+        fi
+    else
+        echo "POSCAR not found in $subdir."
+    fi
+done

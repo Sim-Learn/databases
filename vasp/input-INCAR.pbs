@@ -1,0 +1,5 @@
+for dir in */; do
+    if [ "$dir" != "Co-Zr-0N_sol/" ]; then
+        cp Co-Zr-0N_sol/INCAR "$dir"
+    fi
+done
